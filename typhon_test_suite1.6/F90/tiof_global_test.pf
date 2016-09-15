@@ -1,0 +1,42 @@
+! tiof_global_test.pf
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_size_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  @assertEqual( 4, TIO_SizeOf_f(TIO_REAL4_F) )
+  @assertEqual( 8, TIO_SizeOf_f(TIO_REAL8_F) )
+
+  @assertEqual( 4, TIO_SizeOf_f(TIO_INTEGER4_F) )
+  @assertEqual( 8, TIO_SizeOf_f(TIO_INTEGER8_F) )
+
+end subroutine test_tio_size_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_get_typeclass_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  integer :: typeclass
+
+  ierr = TIO_Get_TypeClass_f(TIO_INTEGER4_F, typeclass)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  @assertEqual( TIO_TYPECLASS_INTEGER_F, typeclass )
+
+  ierr = TIO_Get_TypeClass_f(TIO_INTEGER8_F, typeclass)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  @assertEqual( TIO_TYPECLASS_INTEGER_F, typeclass )
+
+end subroutine test_tio_get_typeclass_f
+
+!#=======================================================================================================================

@@ -1,0 +1,68 @@
+! tio_error_test.pf
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_get_error_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=TIO_STRLEN_F) :: str
+
+  ierr = TIO_Get_Error_f(TIO_ERR_INVALID_ARG_F, str)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  @assertEqual( "Invalid argument given", trim(str) )
+
+end subroutine test_tio_get_error_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_set_verbose_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+
+  ierr = TIO_Set_Verbose_f(TIO_VERBOSE_OFF_F)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Set_Verbose_f(TIO_VERBOSE_ALL_F)
+  ierr = TIO_Set_Verbose_f(TIO_VERBOSE_MASTER_F)
+
+end subroutine test_tio_set_verbose_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_get_verbose_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  integer :: mode
+
+  ierr = TIO_Get_Verbose_f(mode)
+
+  ierr = TIO_Set_Verbose_f(TIO_VERBOSE_OFF_F)
+  ierr = TIO_Get_Verbose_f(mode)
+
+  @assertEqual( TIO_VERBOSE_OFF_F, mode )
+
+  ierr = TIO_Set_Verbose_f(TIO_VERBOSE_MASTER_F)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Get_Verbose_f(mode)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  @assertEqual( TIO_VERBOSE_MASTER_F, mode )
+
+end subroutine test_tio_get_verbose_f
+
+!=======================================================================================================================

@@ -1,0 +1,1035 @@
+!
+! tiof_mesh_test.pf
+!
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_list_meshes_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_SIZEK) :: nobj
+  character(len=TIO_STRLEN_F), dimension(4) :: names
+
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  ierr = TIO_List_Meshes_f(file_id, state_id, nobj=nobj)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  @assertEqual( 4, nobj )
+
+  ierr = TIO_List_Meshes_f(file_id, state_id, names=names)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  !@assertEqual( (/ "QuadCoMesh   ", "QuadNonCoMesh", "UnstrMesh", "PointMesh" /), names )
+  @assertEqual("QuadCoMesh   ", names(1) )
+  @assertEqual("QuadNonCoMesh", names(2) )
+  @assertEqual("UnstrMesh", names(3) )
+  @assertEqual("PointMesh", names(4) )
+
+end subroutine test_tio_list_meshes_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_create_mesh_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_create_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "QuadCoMesh", mesh_id,                              &
+       &                        TIO_MESH_QUAD_COLINEAR_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
+       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 100, 100, 100, 0, 1,               &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "QuadNonCoMesh", mesh_id,                              &
+       &                        TIO_MESH_QUAD_NONCOLINEAR_F, TIO_COORD_CARTESIAN_F, .false., "Group2", 1, &
+       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 100, 100, 100, 2, 1,                  &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "UnstrMesh", mesh_id,                        &
+       &                        TIO_MESH_UNSTRUCT_F, TIO_COORD_CARTESIAN_F, .false., "Group3", 1,  &
+       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 1331, 1000, 1, 8000, 1,     &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "PointMesh", mesh_id,                        &
+       &                        TIO_MESH_POINT_F, TIO_COORD_CARTESIAN_F, .false., "Group4", 1,  &
+       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 10000, 0, 0, 0, 1,          &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+end subroutine test_tio_create_mesh_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_open_mesh_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_IPK) :: meshtype, coordtype
+  logical(kind=TIO_LPK) :: isAMR
+  character(len=TIO_STRLEN_F) :: group
+  integer(kind=TIO_SIZEK) :: order
+  integer(kind=TIO_IPK) :: graph_datatype, coord_datatype, ndims
+  integer(kind=TIO_SIZEK) :: n1, n2, n3, n4, nchunks
+  character(len=TIO_STRLEN_F) :: iunits, junits, kunits
+  character(len=TIO_STRLEN_F) :: ilabel, jlabel, klabel
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f( file_id, state_id, "QuadCoMesh", mesh_id,                            &
+       &                                           meshtype, coordtype, isAMR, group, order,  &
+       &                                           graph_datatype, coord_datatype,            &
+       &                                           ndims, n1, n2, n3, n4, nchunks,            &
+       &                                           iunits, junits, kunits,                    &
+       &                                           ilabel, jlabel, klabel )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  @assertEqual( TIO_MESH_QUAD_COLINEAR_F, meshtype )
+  @assertEqual( TIO_COORD_CARTESIAN_F, coordtype )
+  @assertEqual( .false., isAMR )
+  @assertEqual( "Group1", group )
+!  ASSERT( 1, order )
+  @assertEqual( TIO_INTEGER4_F, graph_datatype )
+  @assertEqual( TIO_REAL8_F, coord_datatype )
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, n1 )
+  @assertEqual( 100, n2 )
+  @assertEqual( 100, n3 )
+  @assertEqual( 1, nchunks )
+  @assertEqual( "mm", iunits )
+  @assertEqual( "mm", junits )
+  @assertEqual( "mm", kunits )
+  @assertEqual( "x", ilabel )
+  @assertEqual( "y", jlabel )
+  @assertEqual( "z", klabel )
+
+end subroutine test_tio_open_mesh_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_open_mesh_idx_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  character(len=TIO_STRLEN_F) :: mesh_name
+  integer(kind=TIO_IPK) :: meshtype, coordtype
+  logical(kind=TIO_LPK) :: isAMR
+  character(len=TIO_STRLEN_F) :: group
+  integer(kind=TIO_SIZEK) :: order
+  integer(kind=TIO_IPK) :: graph_datatype, coord_datatype, ndims
+  integer(kind=TIO_SIZEK) :: n1, n2, n3, n4, nchunks
+  character(len=TIO_STRLEN_F) :: iunits, junits, kunits
+  character(len=TIO_STRLEN_F) :: ilabel, jlabel, klabel
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_idx_f(file_id, state_id, 1, mesh_name, mesh_id,  &
+       &                         meshtype, coordtype, isAMR, group, order,  &
+       &                         graph_datatype, coord_datatype,            &
+       &                         ndims, n1, n2, n3, n4, nchunks,            &
+       &                         iunits, junits, kunits,                    &
+       &                         ilabel, jlabel, klabel)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  @assertEqual( "QuadCoMesh", mesh_name )
+  @assertEqual( TIO_MESH_QUAD_COLINEAR_F, meshtype )
+  @assertEqual( TIO_COORD_CARTESIAN_F, coordtype )
+  @assertEqual( .false., isAMR )
+  @assertEqual( "Group1", group )
+  @assertEqual( 1, order )
+  @assertEqual( TIO_INTEGER4_F, graph_datatype )
+  @assertEqual( TIO_REAL8_F, coord_datatype )
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, n1 )
+  @assertEqual( 100, n2 )
+  @assertEqual( 100, n3 )
+  @assertEqual( 1, nchunks )
+  @assertEqual( "mm", iunits )
+  @assertEqual( "mm", junits )
+  @assertEqual( "mm", kunits )
+  @assertEqual( "x", ilabel )
+  @assertEqual( "y", jlabel )
+  @assertEqual( "z", klabel )
+
+end subroutine test_tio_open_mesh_idx_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_close_mesh_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_close_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "Mesh", mesh_id,                              &
+       &                        TIO_MESH_QUAD_COLINEAR_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
+       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 100, 100, 100, 0, 1,               &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Close_Mesh_f(file_id, mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+end subroutine test_tio_close_mesh_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_get_mesh_info_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  character(len=TIO_STRLEN_F) :: mesh_name
+  integer(kind=TIO_IPK) :: meshtype, coordtype
+  logical(kind=TIO_LPK) :: isAMR
+  character(len=TIO_STRLEN_F) :: group
+  integer(kind=TIO_SIZEK) :: order
+  integer(kind=TIO_IPK) :: graph_datatype, coord_datatype, ndims
+  integer(kind=TIO_SIZEK) :: n1, n2, n3, n4, nchunks
+  character(len=TIO_STRLEN_F) :: iunits, junits, kunits
+  character(len=TIO_STRLEN_F) :: ilabel, jlabel, klabel
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "QuadCoMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Get_Mesh_Info_f(file_id, mesh_id, mesh_name,                      &
+       &                         meshtype, coordtype, isAMR, group, order,  &
+       &                         graph_datatype, coord_datatype,            &
+       &                         ndims, n1, n2, n3, n4, nchunks,            &
+       &                         iunits, junits, kunits,                    &
+       &                         ilabel, jlabel, klabel)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  @assertEqual( "QuadCoMesh", mesh_name )
+  @assertEqual( TIO_MESH_QUAD_COLINEAR_F, meshtype )
+  @assertEqual( TIO_COORD_CARTESIAN_F, coordtype )
+  @assertEqual( .false., isAMR )
+  @assertEqual( "Group1", group )
+  @assertEqual( 1, order )
+  @assertEqual( TIO_INTEGER4_F, graph_datatype )
+  @assertEqual( TIO_REAL8_F, coord_datatype )
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, n1 )
+  @assertEqual( 100, n2 )
+  @assertEqual( 100, n3 )
+  @assertEqual( 1, nchunks )
+  @assertEqual( "mm", iunits )
+  @assertEqual( "mm", junits )
+  @assertEqual( "mm", kunits )
+  @assertEqual( "x", ilabel )
+  @assertEqual( "y", jlabel )
+  @assertEqual( "z", klabel )
+
+end subroutine test_tio_get_mesh_info_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_set_mesh_range_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_set_mesh_range.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "Mesh", mesh_id,                            &
+       &                        TIO_MESH_POINT_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1,  &
+       &                        TIO_REAL8_F, TIO_REAL8_F, TIO_3D_F, 10000, 0, 0, 0, 1,          &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  ierr = TIO_Set_Mesh_Range_f(file_id, mesh_id, TIO_REAL8_F, TIO_3D_F, &
+       &                          -10._8, 10._8, -20._8, 20._8, -30._8, 30._8)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+end subroutine test_tio_set_mesh_range_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_get_mesh_range_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_IPK) :: ndims
+  real(kind=8) :: xl, xh
+  real(kind=8) :: yl, yh, zl, zh
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "QuadCoMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Get_Mesh_Range_f(file_id, mesh_id, TIO_REAL8_F, ndims, &
+       &                          xl, xh, yl, yh, zl, zh)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( -10._8, xl )
+  @assertEqual(  10._8, xh )
+  @assertEqual( -20._8, yl )
+  @assertEqual(  20._8, yh )
+  @assertEqual( -30._8, zl )
+  @assertEqual(  30._8, zh )
+
+end subroutine test_tio_get_mesh_range_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_write_quadmesh_chunk_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_write_quadmesh_chunk.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  real(kind=8), dimension(100) :: idat, jdat, kdat
+  
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "QuadMesh", mesh_id,                         &
+       &                        TIO_MESH_QUAD_NONCOLINEAR_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1,   &
+       &                        TIO_REAL8_F, TIO_REAL8_F, TIO_3D_F, 100, 100, 100, 0, 1,              &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  ierr = TIO_Set_Quad_Chunk_f(file_id, mesh_id, 1, TIO_3D_F, 1, 100, 1, 100, 1, 100, 0, 0)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  idat(:) = 1._8
+  jdat(:) = 2._8
+  kdat(:) = 3._8
+  ierr = TIO_Write_QuadMesh_Chunk_f(file_id, mesh_id, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, idat, jdat, kdat )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+end subroutine test_tio_write_quadmesh_chunk_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_write_quadmesh_all_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_write_quadmesh_all.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  real(kind=8), dimension(100) :: idat, jdat, kdat
+  
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "QuadMesh", mesh_id,                         &
+       &                        TIO_MESH_QUAD_COLINEAR_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1,   &
+       &                        TIO_REAL8_F, TIO_REAL8_F, TIO_3D_F, 100, 100, 100, 0, 1,              &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  ierr = TIO_Set_Quad_Chunk_f(file_id, mesh_id, 1, TIO_3D_F, 1, 100, 1, 100, 1, 100, 0, 0)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  idat(:) = 1._8
+  jdat(:) = 2._8
+  kdat(:) = 3._8
+  ierr = TIO_Write_QuadMesh_All_f(file_id, mesh_id, TIO_REAL8_F, idat, jdat, kdat )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+end subroutine test_tio_write_quadmesh_all_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_quadmesh_chunk_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: ni, nj, nk
+  real(kind=8), dimension(100) :: icoords, jcoords, kcoords
+  real(kind=8), dimension(100) :: idat, jdat, kdat
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "QuadCoMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_QuadMesh_Chunk_f(file_id, mesh_id, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, 0, &
+       &                               ndims, ni, nj, nk, icoords, jcoords, kcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 2._8
+  kdat(:) = 3._8
+  
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, ni )
+  @assertEqual( 100, nj )
+  @assertEqual( 100, nk )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+  @assertEqual( kdat, kcoords )
+
+end subroutine test_tio_read_quadmesh_chunk_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_quadmesh_all_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: ni, nj, nk
+  real(kind=8), dimension(100) :: icoords, jcoords, kcoords
+  real(kind=8), dimension(100) :: idat, jdat, kdat
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "QuadCoMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_QuadMesh_All_f(file_id, mesh_id, TIO_REAL8_F, &
+       &                               ndims, ni, nj, nk, icoords, jcoords, kcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 2._8
+  kdat(:) = 3._8
+  
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, ni )
+  @assertEqual( 100, nj )
+  @assertEqual( 100, nk )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+  @assertEqual( kdat, kcoords )
+
+end subroutine test_tio_read_quadmesh_all_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_quadmesh_section_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_OBJK) :: section_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: ni, nj, nk
+  real(kind=8), dimension(100) :: icoords, jcoords, kcoords
+  real(kind=8), dimension(100) :: idat, jdat, kdat
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "QuadCoMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Set_Quad_Section_f(file_id, mesh_id, section_id, TIO_3D_F, 1, 100, 1, 100, 1, 100)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_QuadMesh_Section_f(file_id, mesh_id, section_id, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, &
+       &                               ndims, ni, nj, nk, icoords, jcoords, kcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 2._8
+  kdat(:) = 3._8
+  
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, ni )
+  @assertEqual( 100, nj )
+  @assertEqual( 100, nk )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+  @assertEqual( kdat, kcoords )
+
+end subroutine test_tio_read_quadmesh_section_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_write_unstrmesh_chunk_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_write_unstrmesh_chunk.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_SHAPEK), dimension(1) :: shapes
+  integer(kind=4), dimension(9) :: nodeIDs
+  integer(kind=4), dimension(4) :: cellIDs
+  integer(kind=4), dimension(16) :: connectivity
+  real(kind=8), dimension(9) :: icoords, jcoords
+
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "UnstrMesh", mesh_id,                          &
+       &                        TIO_MESH_UNSTRUCT_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
+       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_2D_F, 9, 4, 1, 16, 1,            &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  ierr = TIO_Set_Unstr_Chunk_f(file_id, mesh_id, 1, TIO_2D_F, 9, 4, 1, 16, 0, 0, 0, 0, 0, 0)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  nodeIDs = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9 /)
+  cellIDs = (/ 1, 2, 3, 4 /)
+  shapes  = (/ TIO_SHAPE_QUAD4_F /)
+  connectivity(:) = 1
+  icoords(:) = 1._8
+  jcoords(:) = 1._8
+
+  ierr = TIO_Write_UnstrMesh_Chunk_f(file_id, mesh_id, 1, TIO_XFER_COLLECTIVE_F, TIO_INTEGER4_F, &
+       &                                TIO_REAL8_F, nodeIDs, cellIDs, shapes, (/ 4 /), connectivity, &
+       &                                icoords, jcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+end subroutine test_tio_write_unstrmesh_chunk_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_unstrmesh_chunk_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: nnodes, ncells, nshapes, nconnectivity
+  integer(kind=TIO_SHAPEK), dimension(1) :: shapes
+  integer(kind=4), dimension(9) :: nodeIDs
+  integer(kind=4), dimension(4) :: cellIDs
+  integer(kind=4), dimension(1) :: ncells_per_shape
+  integer(kind=4), dimension(16) :: connectivity
+  real(kind=8), dimension(9) :: icoords, jcoords
+  real(kind=8), dimension(9) :: idat, jdat
+  integer(kind=4), dimension(16) :: exp_con
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "UnstrMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_UnstrMesh_Chunk_f(file_id, mesh_id, 1, TIO_XFER_COLLECTIVE_F, &
+       &                                TIO_INTEGER4_F, TIO_REAL8_F, 0,        &
+       &                                ndims, nnodes, ncells, nshapes, nconnectivity,  &
+       &                                nodeIDs, cellIDs, shapes,                       &
+       &                                ncells_per_shape, connectivity,                 &
+       &                                icoords, jcoords )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 1._8
+  exp_con(:) = 1
+  
+  @assertEqual( TIO_2D_F, ndims )
+  @assertEqual( 9, nnodes )
+  @assertEqual( 4, ncells )
+  @assertEqual( 1, nshapes )
+  @assertEqual( 16, nconnectivity )
+  @assertEqual( (/ 1, 2, 3, 4, 5, 6, 7, 8, 9 /), nodeIDs )
+  @assertEqual( (/ 1, 2, 3, 4 /), cellIDs )
+  @assertEqual( (/ TIO_SHAPE_QUAD4_F /), shapes )
+  @assertEqual( (/ 4 /), ncells_per_shape )
+  @assertEqual( exp_con, connectivity )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+
+end subroutine test_tio_read_unstrmesh_chunk_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_unstrmesh_all_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: nnodes, ncells, nshapes, nconnectivity
+  integer(kind=TIO_SHAPEK), dimension(1) :: shapes
+  integer(kind=4), dimension(9) :: nodeIDs
+  integer(kind=4), dimension(4) :: cellIDs
+  integer(kind=4), dimension(1) :: ncells_per_shape
+  integer(kind=4), dimension(16) :: connectivity
+  real(kind=8), dimension(9) :: icoords, jcoords
+  real(kind=8), dimension(9) :: idat, jdat
+  integer(kind=4), dimension(16) :: exp_con
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "UnstrMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_UnstrMesh_All_f(file_id, mesh_id,           &
+       &                              TIO_INTEGER4_F, TIO_REAL8_F,        &
+       &                              ndims, nnodes, ncells, nshapes, nconnectivity,  &
+       &                              nodeIDs, cellIDs, shapes,                       &
+       &                              ncells_per_shape, connectivity,                 &
+       &                              icoords, jcoords )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 1._8
+  exp_con(:) = 1
+  
+  @assertEqual( TIO_2D_F, ndims )
+  @assertEqual( 9, nnodes )
+  @assertEqual( 4, ncells )
+  @assertEqual( 1, nshapes )
+  @assertEqual( 16, nconnectivity )
+  @assertEqual( (/ 1, 2, 3, 4, 5, 6, 7, 8, 9 /), nodeIDs )
+  @assertEqual( (/ 1, 2, 3, 4 /), cellIDs )
+  @assertEqual( (/ TIO_SHAPE_QUAD4_F /), shapes )
+  @assertEqual( (/ 4 /), ncells_per_shape )
+  @assertEqual( exp_con, connectivity )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+
+end subroutine test_tio_read_unstrmesh_all_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_unstrmesh_section_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_OBJK) :: section_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: nnodes, ncells, nshapes, nconnectivity
+  real(kind=8), dimension(9) :: icoords, jcoords
+  real(kind=8), dimension(9) :: idat, jdat
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "UnstrMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Set_Unstr_Section_f(file_id, mesh_id, section_id, TIO_CENTRE_NODE_F, 9, &
+       &                           (/ 1, 2, 3, 4, 5, 6, 7, 8, 9 /))
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  ierr = TIO_Read_UnstrMesh_Section_f(file_id, mesh_id, section_id, TIO_XFER_COLLECTIVE_F, &
+       &                                TIO_REAL8_F, ndims, nnodes, icoords, jcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 1._8
+  
+  @assertEqual( TIO_2D_F, ndims )
+  @assertEqual( 9, nnodes )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+
+end subroutine test_tio_read_unstrmesh_section_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_write_pointmesh_chunk_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_write_pointmesh_chunk.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  real(kind=8), dimension(100) :: icoords, jcoords, kcoords
+
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "PointMesh", mesh_id,                          &
+       &                        TIO_MESH_POINT_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
+       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 100, 0, 0, 0, 1,                &
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+  ierr = TIO_Set_Point_Chunk_f(file_id, mesh_id, 1, TIO_3D_F, 1, 100, 0)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  icoords(:) = 1._8
+  jcoords(:) = 2._8
+  kcoords(:) = 3._8
+
+  ierr = TIO_Write_PointMesh_Chunk_f(file_id, mesh_id, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, &
+       &                                icoords, jcoords, kcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+end subroutine test_tio_write_pointmesh_chunk_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_pointmesh_chunk_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: nnodes
+  real(kind=8), dimension(100) :: icoords, jcoords, kcoords
+  real(kind=8), dimension(100) :: idat, jdat, kdat
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "PointMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_PointMesh_Chunk_f(file_id, mesh_id, 1, TIO_XFER_COLLECTIVE_F, &
+       &                                TIO_REAL8_F, 0, ndims, nnodes, &
+       &                                icoords, jcoords, kcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 2._8
+  kdat(:) = 3._8
+  
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, nnodes )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+  @assertEqual( kdat, kcoords )
+
+end subroutine test_tio_read_pointmesh_chunk_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_pointmesh_all_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: nnodes
+  real(kind=8), dimension(100) :: icoords, jcoords, kcoords
+  real(kind=8), dimension(100) :: idat, jdat, kdat
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "PointMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_PointMesh_All_f(file_id, mesh_id, &
+       &                                TIO_REAL8_F, ndims, nnodes, &
+       &                                icoords, jcoords, kcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 2._8
+  kdat(:) = 3._8
+  
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, nnodes )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+  @assertEqual( kdat, kcoords )
+
+end subroutine test_tio_read_pointmesh_all_f
+
+!=======================================================================================================================
+
+@test
+subroutine test_tio_read_pointmesh_section_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_mesh.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_OBJK) :: section_id
+  integer(kind=TIO_IPK) :: ndims
+  integer(kind=TIO_SIZEK) :: nnodes
+  real(kind=8), dimension(100) :: icoords, jcoords, kcoords
+  real(kind=8), dimension(100) :: idat, jdat, kdat
+  integer(kind=4), dimension(100) :: secIDs
+  integer :: i
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Mesh_f(file_id, state_id, "PointMesh", mesh_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  secIDs(:) = (/ (i,i=1,100) /)
+  
+  ierr = TIO_Set_Point_Section_f(file_id, mesh_id, section_id, 100, secIDs)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_PointMesh_Section_f(file_id, mesh_id, section_id, TIO_XFER_COLLECTIVE_F, &
+       &                                TIO_REAL8_F, ndims, nnodes, &
+       &                                icoords, jcoords, kcoords)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+       
+  idat(:) = 1._8
+  jdat(:) = 2._8
+  kdat(:) = 3._8
+  
+  @assertEqual( TIO_3D_F, ndims )
+  @assertEqual( 100, nnodes )
+  @assertEqual( idat, icoords )
+  @assertEqual( jdat, jcoords )
+  @assertEqual( kdat, kcoords )
+
+
+end subroutine test_tio_read_pointmesh_section_f
+
+!=======================================================================================================================

@@ -1,0 +1,328 @@
+!
+! tiof_variable_test.pf
+!
+
+!=======================================================================================================================
+
+subroutine test_tio_list_variables_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_variable.h5"
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_SIZEK) :: nobj
+  character(len=TIO_STRLEN_F), dimension(3) :: names
+
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_List_Variables_f(file_id, state_id, nobj=nobj)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  @assertEqual( 3, nobj )
+  
+  ierr = TIO_List_Variables_f(file_id, state_id, names=names)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  !@assertEqual( (/ "Variable1", "Variable2", "Variable3" /), names )
+  @assertEqual( "Variable1", names(1) )
+  @assertEqual( "Variable2", names(2) )
+  @assertEqual( "Variable3", names(3) )
+
+
+end subroutine test_tio_list_variables_f
+
+!=======================================================================================================================
+
+subroutine test_tio_create_variable_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_create_variable.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_OBJK) :: var_id
+
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Variable_f(file_id, state_id, "Variable1", var_id, TIO_REAL8_F, TIO_3D_F, (/ 2, 2, 2 /), "units")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+
+end subroutine test_tio_create_variable_f
+
+!=======================================================================================================================
+
+subroutine test_tio_open_variable_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_variable.h5"
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: var_id
+  integer(kind=TIO_IPK) :: datatype, ndims
+  integer(kind=TIO_SIZEK), dimension(3) :: dims
+  character(len=TIO_STRLEN_F) :: units
+
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Variable_f(file_id, state_id, "Variable1", var_id, datatype, ndims, dims, units)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  @assertEqual( TIO_REAL8_F, datatype )
+  @assertEqual( 3, ndims )
+  @assertEqual( (/ 10, 10, 10 /), dims )
+  @assertEqual( "units", units )
+
+
+end subroutine test_tio_open_variable_f
+
+!=======================================================================================================================
+
+subroutine test_tio_open_variable_idx_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_variable.h5"
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: var_id
+  character(len=TIO_STRLEN_F) :: var_name
+  integer(kind=TIO_IPK) :: datatype, ndims
+  integer(kind=TIO_SIZEK), dimension(3) :: dims
+  character(len=TIO_STRLEN_F) :: units
+
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Variable_idx_f(file_id, state_id, 1, var_name, var_id, datatype, ndims, dims, units)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  @assertEqual( "Variable1", var_name )
+  @assertEqual( TIO_REAL8_F, datatype )
+  @assertEqual( 3, ndims )
+  @assertEqual( (/ 10, 10, 10 /), dims )
+  @assertEqual( "units", units )
+
+
+end subroutine test_tio_open_variable_idx_f
+
+!=======================================================================================================================
+
+subroutine test_tio_close_variable_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_close_variable.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_OBJK) :: var_id
+
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Variable_f(file_id, state_id, "Variable1", var_id, TIO_REAL8_F, TIO_3D_F, (/ 2, 2, 2 /), "units")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Close_Variable_f(file_id, var_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+
+end subroutine test_tio_close_variable_f
+
+!=======================================================================================================================
+
+subroutine test_tio_get_variable_info_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_variable.h5"
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: var_id
+  character(len=TIO_STRLEN_F) :: var_name
+  integer(kind=TIO_IPK) :: datatype, ndims
+  integer(kind=TIO_SIZEK), dimension(3) :: dims
+  character(len=TIO_STRLEN_F) :: units
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Variable_f(file_id, state_id, "Variable1", var_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Get_Variable_Info_f(file_id, var_id, var_name, datatype, ndims, dims, units)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  @assertEqual( "Variable1", var_name )
+  @assertEqual( TIO_REAL8_F, datatype )
+  @assertEqual( 3, ndims )
+  @assertEqual( (/ 10, 10, 10 /), dims )
+  @assertEqual( "units", units )
+
+
+end subroutine test_tio_get_variable_info_f
+
+!=======================================================================================================================
+
+subroutine test_tio_write_variable_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "tio_write_variable.h5"
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: mesh_id
+  integer(kind=TIO_OBJK) :: var_id
+  real(kind=8), dimension(10,10,10) :: vdata
+  integer :: i
+
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Create_Variable_f(file_id, state_id, "Variable1", var_id, TIO_REAL8_F, &
+       &                           TIO_3D_F, (/ 10, 10, 10 /), "units")
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  vdata = reshape( (/ (i,i=1,1000) /), (/ 10, 10, 10 /) )
+  
+  ierr = TIO_Write_Variable_f(file_id, var_id, TIO_REAL8_F, vdata)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+
+end subroutine test_tio_write_variable_f
+
+!=======================================================================================================================
+
+subroutine test_tio_read_variable_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_variable.h5"
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: var_id
+  real(kind=8), dimension(10,10,10) :: vdata
+  real(kind=8), dimension(1000) :: exp_vdata
+  integer :: i
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Variable_f(file_id, state_id, "Variable1", var_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_Variable_f(file_id, var_id, TIO_REAL8_F, vdata)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  exp_vdata = (/ (i,i=1,1000) /)
+  
+  @assertEqual( exp_vdata, reshape( vdata, (/ 1000 /) ) )
+
+end subroutine test_tio_read_variable_f
+
+!=======================================================================================================================
+
+subroutine test_tio_read_variable_section_f
+
+  use pfunit_mod
+  use typhonio
+  implicit none
+
+  integer :: ierr
+  character(len=*), parameter :: file_name = "./tio_files/tio_variable.h5"
+  character(len=TIO_STRLEN_F) :: code_name
+  character(len=TIO_STRLEN_F) :: version
+  character(len=TIO_STRLEN_F) :: date
+  character(len=TIO_STRLEN_F) :: title
+  integer(kind=TIO_FILEK) :: file_id
+  integer(kind=TIO_OBJK) :: state_id
+  integer(kind=TIO_OBJK) :: var_id
+  real(kind=8), dimension(10,10,10) :: vdata
+  real(kind=8), dimension(2,2,2) :: vdata2
+  real(kind=8), dimension(8) :: exp_vdata
+  integer :: i
+  
+  ierr = TIO_Open_f(file_name, file_id, TIO_ACC_READONLY_F, code_name, version, date, title)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  ierr = TIO_Open_State_f(file_id, "State1", state_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Open_Variable_f(file_id, state_id, "Variable1", var_id)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  ierr = TIO_Read_Variable_Section_f(file_id, var_id, TIO_REAL8_F, TIO_3D_F, (/ 1, 1, 1 /), (/ 2, 2, 2 /), vdata2)
+  @assertEqual(TIO_SUCCESS_F, ierr)
+  
+  exp_vdata = (/ 1, 2, 11, 12, 101, 102, 111, 112 /)
+ 
+  @assertEqual( exp_vdata, reshape( vdata2, (/ 8 /) ) )
+
+end subroutine test_tio_read_variable_section_f
+
+!=======================================================================================================================

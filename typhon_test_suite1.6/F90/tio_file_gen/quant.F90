@@ -6,7 +6,15 @@
 ! For more details see license.txt
 !
 
-#define TIO_CHECK( X ) ierr = X; if (ierr .ne. TIO_SUCCESS_F) print *, 'Error:', __line__, ierr
+!#define TIO_CHECK( X ) ierr = X; if (ierr .ne. TIO_SUCCESS_F) print *, 'Error:', __LINE__, ierr
+subroutine tio_check_error(ierr, line_number)
+  use typhonio
+  implicit none
+  integer, intent(in) :: ierr, line_number
+  if (ierr .ne. TIO_SUCCESS_F) then
+    print *, 'Error:', line_number, ierr
+  end if
+end subroutine tio_check_error
 
 program main
   use typhonio
@@ -29,46 +37,81 @@ program main
   integer(kind=4), dimension(16) :: connectivity
   real(kind=8), dimension(9) :: icoords, jcoords
 
-  TIO_CHECK( TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title") )
+!  TIO_CHECK( TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title") )
+  ierr = TIO_Create_f(file_name, file_id, TIO_ACC_REPLACE_F, "TestCode", "V0.0", "01-01-2000", "Test Title")
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" ) )
+!  TIO_CHECK( TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" ) )
+  ierr = TIO_Create_State_f( file_id, "State1", state_id, 1, 0.0_TIO_TIMEK, "seconds" )
+  call tio_check_error(ierr, __LINE__)
  
 !======================================================================================================================
 ! QUAD MESH
 
-  TIO_CHECK( TIO_Create_Mesh_f( file_id, state_id, "QuadMesh", quadcomesh_id,                        &
+!  TIO_CHECK( TIO_Create_Mesh_f( file_id, state_id, "QuadMesh", quadcomesh_id,                        &
+!       &                        TIO_MESH_QUAD_COLINEAR_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
+!       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 10, 10, 10, 0, 1,            &
+!       &                        "mm", "mm", "mm", "x", "y", "z" ) )
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "QuadMesh", quadcomesh_id,                        &
        &                        TIO_MESH_QUAD_COLINEAR_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
        &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 10, 10, 10, 0, 1,            &
-       &                        "mm", "mm", "mm", "x", "y", "z" ) )
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Set_Quad_Chunk_f(file_id, quadcomesh_id, 1, TIO_3D_F, 1, 10, 1, 10, 1, 10, 0, 0) )
+!  TIO_CHECK( TIO_Set_Quad_Chunk_f(file_id, quadcomesh_id, 1, TIO_3D_F, 1, 10, 1, 10, 1, 10, 0, 0) )
+  ierr = TIO_Set_Quad_Chunk_f(file_id, quadcomesh_id, 1, TIO_3D_F, 1, 10, 1, 10, 1, 10, 0, 0)
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant1", quant_id1, TIO_REAL8_F, &
-                  TIO_CENTRE_NODE_F, 0, .false., "node") )
+!  TIO_CHECK( TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant1", quant_id1, TIO_REAL8_F, &
+!                  TIO_CENTRE_NODE_F, 0, .false., "node") )
+  ierr = TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant1", quant_id1, TIO_REAL8_F, &
+                  TIO_CENTRE_NODE_F, 0, .false., "node")
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant2", quant_id2, TIO_REAL4_F, &
-                  TIO_CENTRE_CELL_F, 0, .false., "node") )
+!  TIO_CHECK( TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant2", quant_id2, TIO_REAL4_F, &
+!                  TIO_CENTRE_CELL_F, 0, .false., "node") )
+  ierr = TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant2", quant_id2, TIO_REAL4_F, &
+                  TIO_CENTRE_CELL_F, 0, .false., "node")
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant3", quant_id3, TIO_INTEGER4_F, &
-                  TIO_CENTRE_CELL_F, 0, .false., "node") )
+!  TIO_CHECK( TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant3", quant_id3, TIO_INTEGER4_F, &
+!                  TIO_CENTRE_CELL_F, 0, .false., "node") )
+  ierr = TIO_Create_Quant_f(file_id, quadcomesh_id, "Quant3", quant_id3, TIO_INTEGER4_F, &
+                  TIO_CENTRE_CELL_F, 0, .false., "node")
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Set_Quant_Range_f(file_id, quant_id1, TIO_REAL8_F, 1._8, 1000._8) )
-  TIO_CHECK( TIO_Set_Quant_Range_f(file_id, quant_id2, TIO_REAL4_F, -1._4, 1._4) )
-  TIO_CHECK( TIO_Set_Quant_Range_f(file_id, quant_id3, TIO_INTEGER4_F, 0_4, 100_4) )
+!  TIO_CHECK( TIO_Set_Quant_Range_f(file_id, quant_id1, TIO_REAL8_F, 1._8, 1000._8) )
+  ierr = TIO_Set_Quant_Range_f(file_id, quant_id1, TIO_REAL8_F, 1._8, 1000._8)
+  call tio_check_error(ierr, __LINE__)
+!  TIO_CHECK( TIO_Set_Quant_Range_f(file_id, quant_id2, TIO_REAL4_F, -1._4, 1._4) )
+  ierr = TIO_Set_Quant_Range_f(file_id, quant_id2, TIO_REAL4_F, -1._4, 1._4)
+  call tio_check_error(ierr, __LINE__)
+!  TIO_CHECK( TIO_Set_Quant_Range_f(file_id, quant_id3, TIO_INTEGER4_F, 0_4, 100_4) )
+  ierr = TIO_Set_Quant_Range_f(file_id, quant_id3, TIO_INTEGER4_F, 0_4, 100_4)
+  call tio_check_error(ierr, __LINE__)
 
   qdat(:,:,:) = reshape( (/ (i,i=1,1000) /), (/ 10, 10, 10 /) )
 
-  TIO_CHECK( TIO_Write_QuadQuant_Chunk_f( file_id, quant_id1, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qdat ) )
+!  TIO_CHECK( TIO_Write_QuadQuant_Chunk_f( file_id, quant_id1, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qdat ) )
+  ierr = TIO_Write_QuadQuant_Chunk_f( file_id, quant_id1, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qdat )
+  call tio_check_error(ierr, __LINE__)
 
 !======================================================================================================================
 ! UNSTRUCTURED MESH
 
-  TIO_CHECK( TIO_Create_Mesh_f( file_id, state_id, "UnstrMesh", unstrmesh_id,                          &
+!  TIO_CHECK( TIO_Create_Mesh_f( file_id, state_id, "UnstrMesh", unstrmesh_id,                          &
+!       &                        TIO_MESH_UNSTRUCT_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
+!       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_2D_F, 9, 4, 1, 16, 1,                &
+!       &                        "mm", "mm", "mm", "x", "y", "z" ) )
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "UnstrMesh", unstrmesh_id,                          &
        &                        TIO_MESH_UNSTRUCT_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
        &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_2D_F, 9, 4, 1, 16, 1,                &
-       &                        "mm", "mm", "mm", "x", "y", "z" ) )
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Set_Unstr_Chunk_f(file_id, unstrmesh_id, 1, TIO_2D_F, 9, 4, 1, 16, 0, 0, 0, 0, 0, 0) )
+!  TIO_CHECK( TIO_Set_Unstr_Chunk_f(file_id, unstrmesh_id, 1, TIO_2D_F, 9, 4, 1, 16, 0, 0, 0, 0, 0, 0) )
+  ierr = TIO_Set_Unstr_Chunk_f(file_id, unstrmesh_id, 1, TIO_2D_F, 9, 4, 1, 16, 0, 0, 0, 0, 0, 0)
+  call tio_check_error(ierr, __LINE__)
 
   nodeIDs = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9 /)
   cellIDs = (/ 1, 2, 3, 4 /)
@@ -77,36 +120,59 @@ program main
   icoords(:) = 1._8
   jcoords(:) = 1._8
 
-  TIO_CHECK( TIO_Write_UnstrMesh_Chunk_f(file_id, unstrmesh_id, 1, TIO_XFER_COLLECTIVE_F, TIO_INTEGER4_F, &
+!  TIO_CHECK( TIO_Write_UnstrMesh_Chunk_f(file_id, unstrmesh_id, 1, TIO_XFER_COLLECTIVE_F, TIO_INTEGER4_F, &
+!       &                                TIO_REAL8_F, nodeIDs, cellIDs, shapes, (/ 4 /), connectivity, &
+!       &                                icoords, jcoords) )
+  ierr = TIO_Write_UnstrMesh_Chunk_f(file_id, unstrmesh_id, 1, TIO_XFER_COLLECTIVE_F, TIO_INTEGER4_F, &
        &                                TIO_REAL8_F, nodeIDs, cellIDs, shapes, (/ 4 /), connectivity, &
-       &                                icoords, jcoords) )
+       &                                icoords, jcoords)
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Create_Quant_f(file_id, unstrmesh_id, "Quant1", quant_id4, TIO_REAL8_F, &
-                  TIO_CENTRE_NODE_F, 0, .false., "node") )
+!  TIO_CHECK( TIO_Create_Quant_f(file_id, unstrmesh_id, "Quant1", quant_id4, TIO_REAL8_F, &
+!                  TIO_CENTRE_NODE_F, 0, .false., "node") )
+  ierr = TIO_Create_Quant_f(file_id, unstrmesh_id, "Quant1", quant_id4, TIO_REAL8_F, &
+                  TIO_CENTRE_NODE_F, 0, .false., "node")
+  call tio_check_error(ierr, __LINE__)
 
   qnode(:) = (/ 0., 1., 2., 3., 4., 5., 6., 7., 8. /)
   
-  TIO_CHECK( TIO_Write_UnstrQuant_Chunk_f( file_id, quant_id4, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qnode ) )
+!  TIO_CHECK( TIO_Write_UnstrQuant_Chunk_f( file_id, quant_id4, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qnode ) )
+  ierr = TIO_Write_UnstrQuant_Chunk_f( file_id, quant_id4, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qnode )
+  call tio_check_error(ierr, __LINE__)
 
 !======================================================================================================================
 ! UNSTRUCTURED MESH
 
-  TIO_CHECK( TIO_Create_Mesh_f( file_id, state_id, "PointMesh", pointmesh_id,                          &
+!  TIO_CHECK( TIO_Create_Mesh_f( file_id, state_id, "PointMesh", pointmesh_id,                          &
+!       &                        TIO_MESH_POINT_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
+!       &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 100, 0, 0, 0, 1,                &
+!       &                        "mm", "mm", "mm", "x", "y", "z" ) )
+  ierr = TIO_Create_Mesh_f( file_id, state_id, "PointMesh", pointmesh_id,                          &
        &                        TIO_MESH_POINT_F, TIO_COORD_CARTESIAN_F, .false., "Group1", 1, &
        &                        TIO_INTEGER4_F, TIO_REAL8_F, TIO_3D_F, 100, 0, 0, 0, 1,                &
-       &                        "mm", "mm", "mm", "x", "y", "z" ) )
+       &                        "mm", "mm", "mm", "x", "y", "z" )
+  call tio_check_error(ierr, __LINE__)
 
-  TIO_CHECK( TIO_Set_Point_Chunk_f(file_id, pointmesh_id, 1, TIO_3D_F, 1, 100, 0) )
+!  TIO_CHECK( TIO_Set_Point_Chunk_f(file_id, pointmesh_id, 1, TIO_3D_F, 1, 100, 0) )
+  ierr = TIO_Set_Point_Chunk_f(file_id, pointmesh_id, 1, TIO_3D_F, 1, 100, 0)
+  call tio_check_error(ierr, __LINE__)
   
-  TIO_CHECK( TIO_Create_Quant_f(file_id, pointmesh_id, "Quant1", quant_id5, TIO_REAL8_F, &
-                  TIO_CENTRE_NODE_F, 0, .false., "node") )
+!  TIO_CHECK( TIO_Create_Quant_f(file_id, pointmesh_id, "Quant1", quant_id5, TIO_REAL8_F, &
+!                  TIO_CENTRE_NODE_F, 0, .false., "node") )
+  ierr = TIO_Create_Quant_f(file_id, pointmesh_id, "Quant1", quant_id5, TIO_REAL8_F, &
+                  TIO_CENTRE_NODE_F, 0, .false., "node")
+  call tio_check_error(ierr, __LINE__)
 
   qpoint(:) = (/ (i,i=1,100) /)
   
-  TIO_CHECK( TIO_Write_PointQuant_Chunk_f( file_id, quant_id5, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qpoint ) )
+!  TIO_CHECK( TIO_Write_PointQuant_Chunk_f( file_id, quant_id5, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qpoint ) )
+  ierr = TIO_Write_PointQuant_Chunk_f( file_id, quant_id5, 1, TIO_XFER_COLLECTIVE_F, TIO_REAL8_F, qpoint )
+  call tio_check_error(ierr, __LINE__)
 
 !======================================================================================================================
 
-  TIO_CHECK( TIO_Close_f(file_id) )
+!  TIO_CHECK( TIO_Close_f(file_id) )
+  ierr = TIO_Close_f(file_id)
+  call tio_check_error(ierr, __LINE__)
 
 end program main

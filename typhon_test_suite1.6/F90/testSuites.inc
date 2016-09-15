@@ -1,0 +1,12 @@
+
+ADD_TEST_SUITE(tiof_access_test_suite)
+ADD_TEST_SUITE(tiof_chunk_test_suite)
+ADD_TEST_SUITE(tiof_error_test_suite)
+ADD_TEST_SUITE(tiof_global_test_suite)
+ADD_TEST_SUITE(tiof_material_test_suite)
+ADD_TEST_SUITE(tiof_mesh_test_suite)
+ADD_TEST_SUITE(tiof_quant_test_suite)
+ADD_TEST_SUITE(tiof_state_test_suite)
+ADD_TEST_SUITE(tiof_utils_test_suite)
+ADD_TEST_SUITE(tiof_vargroup_test_suite)
+ADD_TEST_SUITE(tiof_variable_test_suite)
